@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consulta ONPE por Excel</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="page-aura page-aura-left" aria-hidden="true"></div>
+  <div class="page-aura page-aura-right" aria-hidden="true"></div>
+  <main class="page-shell">
+    <section class="hero-grid">
+      <article class="hero-panel">
+        <p class="eyebrow">Consulta electoral automatizada</p>
+        <h1>Procesa un lote de DNIs y devuelve el resultado listo para exportar.</h1>
+        <p class="lead">
+          La aplicacion toma un Excel con una columna <strong>DNI</strong>, consulta la pagina oficial de ONPE con Playwright y arma una salida consolidada en otro Excel.
+        </p>
+
+        <div class="hero-tags">
+          <span class="hero-tag">Excel .xlsx</span>
+          <span class="hero-tag">Playwright</span>
+          <span class="hero-tag">Fuente oficial ONPE</span>
+        </div>
+
+        <div class="hero-note">
+          <strong>Alcance real:</strong> automatiza la lectura del archivo, la consulta DNI por DNI y la exportacion final.
+          Sigue dependiendo de que la web oficial responda y de que el archivo tenga la columna <strong>DNI</strong>.
+        </div>
+      </article>
+
+      <aside class="upload-panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Carga de archivo</p>
+            <h2>Sube el Excel y ejecuta la consulta</h2>
+          </div>
+          <span class="badge badge-strong">Automatizacion activa</span>
+        </div>
+
+        <form action="/upload" method="POST" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+          <label for="excelFile" class="file-dropzone">
+            <span class="file-dropzone__eyebrow">Archivo de entrada</span>
+            <strong>Selecciona tu hoja de calculo</strong>
+            <span>Formato esperado: `.xlsx` con la columna `DNI` en la primera fila.</span>
+          </label>
+          <input id="excelFile" type="file" name="excelFile" accept=".xlsx" required />
+          <p class="selected-file" id="selectedFile">Ningun archivo seleccionado.</p>
+          <button type="submit" id="submitButton">Consultar DNIs</button>
+        </form>
+
+        <% if (info) { %>
+          <div class="alert info"><%= info %></div>
+        <% } %>
+
+        <% if (error) { %>
+          <div class="alert error"><%= error %></div>
+        <% } %>
+
+        <% if (downloadFile) { %>
+          <div class="alert success">
+            <div class="alert-title">Resultado listo para descarga</div>
+            <p>
+              Archivo procesado correctamente<% if (originalName) { %>: <strong><%= originalName %></strong><% } %>.
+            </p>
+            <div class="download-actions">
+              <a class="download-button" href="/download/<%= downloadFile %>">Descargar resultados en Excel</a>
+            </div>
+          </div>
+        <% } %>
+      </aside>
+    </section>
+
+    <section class="metrics-grid">
+      <article class="metric-card metric-card-primary">
+        <span class="metric-label">Total procesado</span>
+        <strong><%= stats.total %></strong>
+        <p>Registros acumulados en la vista actual.</p>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Miembros de mesa</span>
+        <strong><%= stats.si %></strong>
+        <p>Coincidencias positivas obtenidas en la consulta.</p>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">No encontrados</span>
+        <strong><%= stats.no %></strong>
+        <p>DNIs con respuesta valida pero sin asignacion.</p>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Para revisar</span>
+        <strong><%= stats.revision %></strong>
+        <p>Filas con datos incompletos o incidencias de consulta.</p>
+      </article>
+    </section>
+
+    <section class="workflow-card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Flujo</p>
+          <h2>Que hace el sistema por ti</h2>
+        </div>
+        <span class="badge">4 pasos</span>
+      </div>
+
+      <div class="workflow-grid">
+        <article class="workflow-step">
+          <span>01</span>
+          <h3>Lee el Excel</h3>
+          <p>Busca la columna DNI y descarta filas vacias.</p>
+        </article>
+        <article class="workflow-step">
+          <span>02</span>
+          <h3>Consulta ONPE</h3>
+          <p>Abre la pagina oficial y procesa cada documento.</p>
+        </article>
+        <article class="workflow-step">
+          <span>03</span>
+          <h3>Normaliza datos</h3>
+          <p>Region, provincia, distrito, local y observaciones quedan estructurados.</p>
+        </article>
+        <article class="workflow-step">
+          <span>04</span>
+          <h3>Exporta resultados</h3>
+          <p>Genera una vista previa y deja el Excel listo para descargar.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="results-card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Resultados</p>
+          <h2>Vista previa de registros procesados</h2>
+        </div>
+        <div class="badge-group">
+          <span class="badge badge-soft">Fuente: ONPE</span>
+          <span class="badge"><%= results.length %> registros</span>
+        </div>
+      </div>
+
+      <% if (results.length > 0) { %>
+        <div class="summary-row">
+          <div class="summary-pill summary-pill-yes">Si: <strong><%= stats.si %></strong></div>
+          <div class="summary-pill summary-pill-no">No: <strong><%= stats.no %></strong></div>
+          <div class="summary-pill summary-pill-review">Revision: <strong><%= stats.revision %></strong></div>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>DNI</th>
+                <th>Miembro de mesa</th>
+                <th>Region</th>
+                <th>Provincia</th>
+                <th>Distrito</th>
+                <th>Direccion del local de votacion</th>
+                <th>Fuente</th>
+                <th>Observacion</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% results.forEach((item) => { %>
+                <tr>
+                  <td><%= item.dni %></td>
+                  <td>
+                    <span class="status <%= item.miembroMesa === 'Si' ? 'yes' : item.miembroMesa === 'No' ? 'no' : 'unknown' %>"><%= item.miembroMesa %></span>
+                  </td>
+                  <td><%= item.region %></td>
+                  <td><%= item.provincia %></td>
+                  <td><%= item.distrito %></td>
+                  <td><%= item.direccionLocal %></td>
+                  <td><%= item.fuente %></td>
+                  <td><%= item.observacion %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <h3>Sin resultados todavia</h3>
+          <p>Sube un archivo Excel para iniciar la consulta contra la pagina oficial. Cuando termine, aqui veras el resumen y la tabla completa.</p>
+        </div>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

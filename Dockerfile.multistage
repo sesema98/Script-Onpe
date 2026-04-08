@@ -1,0 +1,21 @@
+FROM node:18 AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+FROM node:18 AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=builder /app /app
+
+RUN mkdir -p uploads results
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
